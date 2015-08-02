@@ -27,7 +27,8 @@ protected:
   ros::Publisher pub_calibrated_depth_raw_;
 
   double unknown_depth_distance_;
-  double unknown_adjust_max_percentage_;
+  double is_occluded_percentage_;
+  double occluded_distance_;
 
   double border_percentage_top_;
   double border_percentage_bottom_;
