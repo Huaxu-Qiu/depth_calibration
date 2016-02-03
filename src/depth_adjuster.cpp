@@ -255,7 +255,7 @@ void DepthAdjuster::removeOutliers(cv::Mat& image)
 //      count_row[x] = cv::sum((roi > min & roi < max) / 255)[0];
 //    }
 //  }
-  int limit = 4;//includes itself
+  int limit = 4; //includes itself
   cv::Mat inlier = (number_of_close_points > limit) / 255;
 
   inlier.convertTo(inlier, CV_32F);
@@ -268,17 +268,22 @@ void DepthAdjuster::removeOutliers(cv::Mat& image)
 
 void DepthAdjuster::remove_borders(cv::Mat& image)
 {
-  int border_height_top = image.cols * border_percentage_top_;
-  int border_height_bottom = image.cols * border_percentage_bottom_;
-  int border_width_left = image.rows * border_percentage_left_;
-  int border_width_right = image.rows * border_percentage_right_;
-  cv::Mat borders(image.size(), CV_64F, 1.0);
+  int border_height_top = image.rows * border_percentage_top_;
+  int border_height_bottom = image.rows * border_percentage_bottom_;
+  int border_width_left = image.cols * border_percentage_left_;
+  int border_width_right = image.cols * border_percentage_right_;
 
+  int bottom_start = image.rows - border_height_bottom;
+  bottom_start = std::min(std::max(bottom_start, 0), image.rows - 1);
+  int right_start = image.cols - border_width_right;
+  right_start = std::min(std::max(right_start, 0), image.cols - 1);
+
+  //Rect(int x, int y, int width, int height)
   image(cv::Rect(0, 0, image.cols, border_height_top)).setTo(0); //top
-  image(cv::Rect(0, image.rows - border_height_bottom, image.cols, border_height_bottom)).setTo(0); //bottom
+  image(cv::Rect(0, bottom_start, image.cols, border_height_bottom)).setTo(0); //bottom
 
   image(cv::Rect(0, 0, border_width_left, image.rows)).setTo(0); //left
-  image(cv::Rect(image.cols - border_width_right, 0, border_width_right, image.rows)).setTo(0); //right
+  image(cv::Rect(right_start, 0, border_width_right, image.rows)).setTo(0); //right
 }
 
 void DepthAdjuster::relay_camera_info(const sensor_msgs::CameraInfoConstPtr& info_msg)
