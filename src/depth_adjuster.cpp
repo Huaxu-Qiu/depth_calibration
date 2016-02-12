@@ -72,11 +72,12 @@ void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth
       && (depth_msg->width != depth_multiplier_correction_.cols
           || depth_msg->height != depth_multiplier_correction_.rows))
   {
-    ROS_ERROR_STREAM("[Depth adjuster] Calibration file has different resolution than camera depth image");
-    ROS_ERROR_STREAM(
+    ROS_WARN_STREAM_THROTTLE(5.0, "[Depth adjuster] Calibration file has different resolution than camera depth image");
+    ROS_WARN_STREAM_THROTTLE(5.0,
         "[Depth adjuster] Calibration multiplier: " << depth_multiplier_correction_.cols << "x" << depth_multiplier_correction_.rows << ", depth image: " << depth_msg->width << "x" << depth_msg->height);
-    ROS_WARN_STREAM("[Depth adjuster] Skipping depth calibration adjustments.");
-    depth_multiplier_correction_.release();
+    ROS_WARN_STREAM_THROTTLE(5.0, "[Depth adjuster] Skipping depth calibration adjustments (will try again, perhaps camera hasn't reconfigured yet).");
+    pub_calibrated_depth_raw_.publish(depth_msg);
+    return;
   }
 
   cv_bridge::CvImagePtr cv_depth_image;
