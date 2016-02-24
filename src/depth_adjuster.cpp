@@ -12,13 +12,12 @@ void DepthAdjuster::onInit()
 {
   ros::NodeHandle& nh = getNodeHandle();
 
-  sub_depth_raw_ = nh.subscribe<sensor_msgs::Image>("input_depth_raw", 1, &DepthAdjuster::apply_calibration_cb, this);
   pub_calibrated_depth_raw_ = nh.advertise<sensor_msgs::Image>("output_depth_raw", 1);
   pub_inlier_ = nh.advertise<sensor_msgs::Image>("inlier", 1);
 
+  pub_camera_info_relay_ = nh.advertise<sensor_msgs::CameraInfo>("output_camera_info_relay", 1);
   sub_camera_info_ = nh.subscribe<sensor_msgs::CameraInfo>("input_camera_info", 1, &DepthAdjuster::relay_camera_info,
                                                            this);
-  pub_camera_info_relay_ = nh.advertise<sensor_msgs::CameraInfo>("output_camera_info_relay", 1);
 
   ros::NodeHandle& private_nh = getPrivateNodeHandle();
   bool enable;
@@ -45,6 +44,8 @@ void DepthAdjuster::onInit()
   private_nh.param("border_percentage_bottom", border_percentage_bottom_, 0.0);
   private_nh.param("border_percentage_left", border_percentage_left_, 0.0);
   private_nh.param("border_percentage_right", border_percentage_right_, 0.0);
+
+  sub_depth_raw_ = nh.subscribe<sensor_msgs::Image>("input_depth_raw", 1, &DepthAdjuster::apply_calibration_cb, this);
 }
 
 void DepthAdjuster::load_calibration(std::string file_path)
