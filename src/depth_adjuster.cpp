@@ -2,6 +2,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <pluginlib/class_list_macros.h>
 #include <deque>
+#include <std_msgs/Float64.h>
 
 namespace depth_calibration
 {
@@ -18,6 +19,8 @@ void DepthAdjuster::onInit()
   pub_camera_info_relay_ = nh.advertise<sensor_msgs::CameraInfo>("output_camera_info_relay", 1);
   sub_camera_info_ = nh.subscribe<sensor_msgs::CameraInfo>("input_camera_info", 1, &DepthAdjuster::relay_camera_info,
                                                            this);
+
+  invalid_ratio_pub_ = nh.advertise<std_msgs::Float64>("invalid_ratio", 1);
 
   ros::NodeHandle& private_nh = getPrivateNodeHandle();
   bool enable;
@@ -105,6 +108,13 @@ void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth
   cv::Mat zero_addition = (depth_double == 0); //if true value is set to 255, so divide by 255 later
   int unknown_distances_count = cv::countNonZero(zero_addition);
 
+  if(invalid_ratio_pub_.getNumSubscribers() > 0)
+  {
+    std_msgs::Float64 invalid_ratio_msg;
+    invalid_ratio_msg.data = (double)unknown_distances_count / depth_double.total();
+    invalid_ratio_pub_.publish(invalid_ratio_msg);
+  }
+
   if (unknown_distances_count <= depth_double.total() * is_occluded_percentage_)
   {
     zero_addition.convertTo(zero_addition, CV_64F);
@@ -112,7 +122,7 @@ void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth
   }
   else
   {
-    ROS_WARN_THROTTLE(5.0, "3D sensors seems to be occluded");
+    ROS_WARN_THROTTLE(3.0, "3D sensors seems to be occluded");
     zero_addition.convertTo(zero_addition, CV_64F);
     depth_double += (zero_addition * occluded_distance_ * m_to_depth / 255.0);
   }

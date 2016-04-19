@@ -42,6 +42,7 @@ protected:
 
   ros::Subscriber sub_camera_info_;
   ros::Publisher pub_camera_info_relay_;
+  ros::Publisher invalid_ratio_pub_;
 };
 
 } //end namespace
