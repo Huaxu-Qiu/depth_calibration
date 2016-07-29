@@ -1,6 +1,7 @@
 #ifndef DEPTH_CALIBRATION_DEPTH_ADJUSTER_H_
 #define DEPTH_CALIBRATION_DEPTH_ADJUSTER_H_
 
+#include <deque>
 #include <boost/thread/mutex.hpp>
 #include <ros/ros.h>
 #include <nodelet/nodelet.h>
@@ -18,6 +19,9 @@ public:
 
   virtual void apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth_msg);
   virtual void relay_camera_info(const sensor_msgs::CameraInfoConstPtr& depth_msg);
+
+  virtual void ir_cb(const sensor_msgs::ImageConstPtr& ir_msg);
+  virtual void rgb_cb(const sensor_msgs::ImageConstPtr& rgb_msg);
 
 protected:
   virtual void load_calibration(std::string file_path);
@@ -43,8 +47,17 @@ protected:
   ros::Subscriber sub_camera_info_;
   ros::Publisher pub_camera_info_relay_;
   ros::Publisher invalid_ratio_pub_;
+
+  ros::Subscriber sub_ir_;
+  ros::Publisher pub_max_ir_value_;
+  ros::Subscriber sub_rgb_;
+  ros::Publisher pub_exposure_;
+
+  int exposure_;
+  std::deque<cv::Mat> rgb_image_buffer_;
 };
 
 } //end namespace
 
 #endif /* DEPTH_CALIBRATION_DEPTH_ADJUSTER_H_ */
+

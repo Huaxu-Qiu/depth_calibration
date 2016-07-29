@@ -3,41 +3,48 @@
     <arg name="manager"                             default="manager"/>
     <arg name="input_depth_raw_topic"               default="camera/depth_capture/camera_info"/>
     <arg name="output_depth_raw_topic"              default="camera/depth/image_raw"/>
-    
+
     <arg name="input_camera_info_topic"             default="camera/depth_capture/camera_info"/>
     <arg name="output_camera_info_relay_topic"      default="camera/depth/camera_info"/>
-    
+
     <arg name="max_distance"                        default="0.0"/>
     <arg name="unknown_depth_distance"              default="0.0"/>
     <arg name="is_occluded_percentage"              default="1.0"/> <!-- includes unknown at the borders -->
     <arg name="occluded_distance"                   default="0.0"/>
-    
+
     <arg name="border_percentage_top"               default="0.0"/>
     <arg name="border_percentage_bottom"            default="0.0"/>
     <arg name="border_percentage_left"              default="0.0"/>
     <arg name="border_percentage_right"             default="0.0"/>
-    
-    <arg name="calibration_file_path"               default="camera_info/depth_calibration.yaml"/>    
+
+    <arg name="calibration_file_path"               default="camera_info/depth_calibration.yaml"/>
     <arg name="enable_adjust"                       default="true"/>
+
+    <arg name="ir_image_topic"                      default="ir/image"/>
+    <arg name="rgb_image_topic"                     default="rgb/image_rect_colorfdsd"/>
+    <arg name="exposure_topic"                     default="rgb/exposure"/>
 
     <node pkg="nodelet" type="nodelet" name="depth_adjuster" args="load depth_calibration/depth_adjuster $(arg manager)">
         <remap from="input_depth_raw"               to="$(arg input_depth_raw_topic)"/>
         <remap from="output_depth_raw"              to="$(arg output_depth_raw_topic)"/>
-        
+
         <remap from="input_camera_info"             to="$(arg input_camera_info_topic)"/>
         <remap from="output_camera_info_relay"      to="$(arg output_camera_info_relay_topic)"/>
-        
+        <remap from="ir_image"                      to="$(arg ir_image_topic)"/>
+        <remap from="rgb_image"                     to="$(arg rgb_image_topic)"/>
+        <remap from="exposure"                      to="$(arg exposure_topic)"/>
+
         <param name="max_distance"                  type="double"       value="$(arg max_distance)"/>
         <param name="unknown_depth_distance"        type="double"       value="$(arg unknown_depth_distance)"/>
         <param name="is_occluded_percentage"        type="double"       value="$(arg is_occluded_percentage)"/>
-        <param name="occluded_distance"             type="double"       value="$(arg occluded_distance)"/> 
+        <param name="occluded_distance"             type="double"       value="$(arg occluded_distance)"/>
 
         <param name="border_percentage_top"         type="double"       value="$(arg border_percentage_top)"/>
         <param name="border_percentage_bottom"      type="double"       value="$(arg border_percentage_bottom)"/>
         <param name="border_percentage_left"        type="double"       value="$(arg border_percentage_left)"/>
         <param name="border_percentage_right"       type="double"       value="$(arg border_percentage_right)"/>
-        
-        <param name="calibration_file_path"         type="string"       value="$(arg calibration_file_path)"/>        
-        <param name="enable"                        type="bool"         value="$(arg enable_adjust)"/>       
+
+        <param name="calibration_file_path"         type="string"       value="$(arg calibration_file_path)"/>
+        <param name="enable"                        type="bool"         value="$(arg enable_adjust)"/>
     </node>
 </launch>

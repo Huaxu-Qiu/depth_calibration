@@ -3,6 +3,7 @@
 #include <pluginlib/class_list_macros.h>
 #include <deque>
 #include <std_msgs/Float64.h>
+#include <std_msgs/Int32.h>
 
 namespace depth_calibration
 {
@@ -21,6 +22,11 @@ void DepthAdjuster::onInit()
                                                            this);
 
   invalid_ratio_pub_ = nh.advertise<std_msgs::Float64>("invalid_ratio", 1);
+
+  pub_max_ir_value_ = nh.advertise<std_msgs::Float64>("ir_max_value", 1);
+  pub_exposure_ = nh.advertise<std_msgs::Int32>("exposure", 1);
+
+  exposure_ = 50;
 
   ros::NodeHandle& private_nh = getPrivateNodeHandle();
   bool enable;
@@ -49,6 +55,9 @@ void DepthAdjuster::onInit()
   private_nh.param("border_percentage_right", border_percentage_right_, 0.0);
 
   sub_depth_raw_ = nh.subscribe<sensor_msgs::Image>("input_depth_raw", 1, &DepthAdjuster::apply_calibration_cb, this);
+
+//  sub_ir_ = nh.subscribe<sensor_msgs::Image>("ir_image", 1, &DepthAdjuster::ir_cb, this);
+  sub_rgb_ = nh.subscribe<sensor_msgs::Image>("rgb_image", 1, &DepthAdjuster::rgb_cb, this);
 }
 
 void DepthAdjuster::load_calibration(std::string file_path)
@@ -77,9 +86,12 @@ void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth
           || depth_msg->height != depth_multiplier_correction_.rows))
   {
     ROS_WARN_STREAM_THROTTLE(5.0, "[Depth adjuster] Calibration file has different resolution than camera depth image");
-    ROS_WARN_STREAM_THROTTLE(5.0,
+    ROS_WARN_STREAM_THROTTLE(
+        5.0,
         "[Depth adjuster] Calibration multiplier: " << depth_multiplier_correction_.cols << "x" << depth_multiplier_correction_.rows << ", depth image: " << depth_msg->width << "x" << depth_msg->height);
-    ROS_WARN_STREAM_THROTTLE(5.0, "[Depth adjuster] Skipping depth calibration adjustments (will try again, perhaps camera hasn't reconfigured yet).");
+    ROS_WARN_STREAM_THROTTLE(
+        5.0,
+        "[Depth adjuster] Skipping depth calibration adjustments (will try again, perhaps camera hasn't reconfigured yet).");
     pub_calibrated_depth_raw_.publish(depth_msg);
     return;
   }
@@ -108,7 +120,7 @@ void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth
   cv::Mat zero_addition = (depth_double == 0); //if true value is set to 255, so divide by 255 later
   int unknown_distances_count = cv::countNonZero(zero_addition);
 
-  if(invalid_ratio_pub_.getNumSubscribers() > 0)
+  if (invalid_ratio_pub_.getNumSubscribers() > 0)
   {
     std_msgs::Float64 invalid_ratio_msg;
     invalid_ratio_msg.data = (double)unknown_distances_count / depth_double.total();
@@ -302,6 +314,83 @@ void DepthAdjuster::relay_camera_info(const sensor_msgs::CameraInfoConstPtr& inf
 {
   pub_camera_info_relay_.publish(info_msg);
 }
+
+void DepthAdjuster::ir_cb(const sensor_msgs::ImageConstPtr& ir_msg)
+{
+  cv_bridge::CvImagePtr cv_ir_image;
+  try
+  {
+    cv_ir_image = cv_bridge::toCvCopy(ir_msg, "16UC1");
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    ROS_WARN_THROTTLE(1.0, "[Depth adjuster] cv_bridge exception with cv_ir_image: %s", e.what());
+    return;
+  }
+
+  double min = 0;
+  double max = 0;
+  cv::minMaxLoc(cv_ir_image->image, &min, &max);
+
+  if (pub_max_ir_value_.getNumSubscribers() > 0)
+  {
+    std_msgs::Float64 max_ir_msg;
+    max_ir_msg.data = max;
+    pub_max_ir_value_.publish(max_ir_msg);
+  }
+}
+
+void DepthAdjuster::rgb_cb(const sensor_msgs::ImageConstPtr& rgb_msg)
+{
+  cv_bridge::CvImagePtr cv_rgb_image;
+  try
+  {
+    cv_rgb_image = cv_bridge::toCvCopy(rgb_msg, sensor_msgs::image_encodings::BGR8);
+  }
+  catch (cv_bridge::Exception& e)
+  {
+    ROS_WARN_THROTTLE(1.0, "[Depth adjuster] cv_bridge exception with cv_rgb_image: %s", e.what());
+    return;
+  }
+
+  std::vector<cv::Mat> rgb_channels(3);
+  cv::split(cv_rgb_image->image, rgb_channels);
+
+  rgb_channels[0].convertTo(rgb_channels[0], CV_64F);
+  rgb_channels[1].convertTo(rgb_channels[1], CV_64F);
+  rgb_channels[2].convertTo(rgb_channels[2], CV_64F);
+
+  cv::Mat combined = rgb_channels[0] + rgb_channels[1] + rgb_channels[2];
+
+  rgb_image_buffer_.push_back(combined);
+
+  if (rgb_image_buffer_.size() >= 6)
+  {
+    rgb_image_buffer_.pop_front();
+  }
+
+  cv::Mat buffer_earliest = rgb_image_buffer_.front();
+
+  int max_number_of_white = combined.total() * 0.02;
+  int max_value = 3 * 255;
+  int number_of_white = cv::countNonZero(buffer_earliest >= max_value * 0.95);
+
+  int max_exposure = 100;
+
+  if (number_of_white > max_number_of_white && exposure_ > 0)
+  {
+    --exposure_;
+  }
+  else if (exposure_ < max_exposure)
+  {
+    ++exposure_;
+  }
+
+  std_msgs::Int32 exposure_msg;
+  exposure_msg.data = exposure_;
+  pub_exposure_.publish(exposure_msg);
+}
+
 }
 
 PLUGINLIB_EXPORT_CLASS(depth_calibration::DepthAdjuster, nodelet::Nodelet)
