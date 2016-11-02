@@ -122,7 +122,7 @@ void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth
   }
   else
   {
-    ROS_WARN_THROTTLE(3.0, "3D sensors seems to be occluded");
+    ROS_INFO_THROTTLE(15.0, "[Depth adjuster] 3D sensors seems to be occluded");
     zero_addition.convertTo(zero_addition, CV_64F);
     depth_double += (zero_addition * occluded_distance_ * m_to_depth / 255.0);
   }
