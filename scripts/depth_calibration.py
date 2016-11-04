@@ -5,7 +5,6 @@ import roslib
 import numpy as np
 import rospy
 import sys
-import cv2
 import sensor_msgs.point_cloud2
 from std_msgs.msg import Empty
 from sensor_msgs.msg import CameraInfo
@@ -16,13 +15,13 @@ from cv_bridge import CvBridge, CvBridgeError
 
 class DepthCalibration:
 
-    def __init__(self):        
+    def __init__(self):
         self.enable_camera_info_relay = False
         self.enable_depth_relay = False
         
         self.camera_info_relay = rospy.Publisher("camera_info_relay", CameraInfo, queue_size=10)
         self.depth_relay = rospy.Publisher("depth_relay", Image, queue_size=10)        
-        self.save_calibration_publisher = rospy.Publisher("save_calibration_trigger", Empty, queue_size=10)        
+        self.save_calibration_publisher = rospy.Publisher("save_calibration_trigger", Empty, queue_size=10)
         
         self.camera_info_subscriber = rospy.Subscriber("camera_info", CameraInfo, self.camera_info_cb)
         self.depth_subscriber = rospy.Subscriber("depth_raw_distorted", Image, self.depth_cb)
