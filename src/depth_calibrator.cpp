@@ -264,7 +264,7 @@ void save_multiplier(const std_msgs::EmptyConstPtr& empty)
   file_storage.release();
 
   ROS_INFO("Saving finished.");
-  ROS_INFO("All done, finished. Mabe check the result though..");
+  ROS_INFO("All done, finished. Maybe check the result though..");
 }
 
 int main(int argc, char** argv)
