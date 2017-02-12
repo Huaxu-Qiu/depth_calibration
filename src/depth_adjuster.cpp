@@ -41,6 +41,12 @@ void DepthAdjuster::onInit()
   unknown_depth_distance_ = unknown_depth_distance_ * m_to_depth;
 
   private_nh.param("is_occluded_percentage", is_occluded_percentage_, 1.0);
+
+  if(is_occluded_percentage_ <= 0.0)
+  {
+    ROS_WARN("[Depth adjuster] is_occluded_percentage is <= 0.0, occlusion detection is disabled");
+  }
+
   private_nh.param("occluded_distance", occluded_distance_, 0.0);
 
   private_nh.param("border_percentage_top", border_percentage_top_, 0.0);
