@@ -1,0 +1,179 @@
+<!--
+  Launcher for the 3D sensor using OpenNI 2. Significant points:
+
+  - custom compression options for raw depth images (png, level 1 instead of jpeg, 80%)
+  - others not listed here?
+-->
+
+<launch>
+
+  <!-- "camera" should uniquely identify the device. All topics are pushed down
+       into the "camera" namespace, and it is prepended to tf frame ids. -->
+  <arg name="camera"    default="sensor_3d" />
+  <arg name="manager"   default="$(arg camera)_nodelet_manager" />
+
+  <arg name="tf_prefix" default="" />
+<!--   <arg name="rgb_frame_id"   default="$(arg tf_prefix)/$(arg camera)_rgb_optical_frame" /> -->
+<!--   <arg name="depth_frame_id" default="$(arg tf_prefix)/$(arg camera)_depth_optical_frame" /> -->
+  <arg name="rgb_frame_id"   default="$(arg camera)_rgb_optical_frame" />
+  <arg name="depth_frame_id" default="$(arg camera)_depth_optical_frame" />
+
+  <!-- device_id can have the following formats:
+         "#1"  : the first device found
+         "2@X" : the Xth device on USB bus 2 -->
+  <arg name="device_id"         default="#1" />
+  <arg name="points_processing" default="true" />
+
+  <!-- By default, calibrations are stored to file://${ROS_HOME}/camera_info/${NAME}.yaml,
+       where ${NAME} is of the form "[rgb|depth]_[serial#]", e.g. "depth_B00367707227042B".
+       See camera_info_manager docs for calibration URL details. -->
+  <arg name="rgb_camera_info_url"   default="" />
+  <arg name="depth_camera_info_url" default="" />
+
+  <!-- Hardware depth registration -->
+  <arg name="depth_registration" default="false" />
+
+  <!-- Driver parameters -->
+  <arg name="color_depth_synchronization"     default="false" />
+  <arg name="auto_exposure"                   default="true" />
+  <arg name="auto_white_balance"              default="true" />
+
+  <!-- Arguments for remapping all device namespaces -->
+  <arg name="rgb"                default="rgb" />
+  <arg name="ir"                 default="ir" />
+  <arg name="depth"              default="depth" />
+  <arg name="uncalibrated_depth" default="uncalibrated_depth" />
+
+  <!-- Optionally suppress loading the driver nodelet and/or publishing the default tf
+       tree. Useful if you are playing back recorded raw data from a bag, or are
+       supplying a more accurate tf tree from calibration. -->
+  <arg name="load_driver"                     default="true" />
+  <arg name="publish_tf"                      default="false" />
+  <!-- Processing Modules -->
+  <arg name="rgb_processing"                  default="true"  />
+  <arg name="debayer_processing"              default="false" />
+  <arg name="ir_processing"                   default="false" />
+  <arg name="depth_processing"                default="true" />
+  <arg name="depth_registered_processing"     default="true" />
+  <arg name="disparity_processing"            default="false" />
+  <arg name="disparity_registered_processing" default="false" />
+  <arg name="hw_registered_processing"        default="true" if="$(arg depth_registration)" />
+  <arg name="sw_registered_processing"        default="false" if="$(arg depth_registration)" />
+  <arg name="hw_registered_processing"        default="false" unless="$(arg depth_registration)" />
+  <arg name="sw_registered_processing"        default="true" unless="$(arg depth_registration)" />
+  <arg name="diagnostics"                     default="true" />
+
+  <!-- Disable bond topics by default -->
+  <arg name="respawn" default="false"/>
+
+  <!-- Worker threads for the nodelet manager -->
+  <arg name="num_worker_threads" default="4"/>
+
+  <!-- Custom parameters -->
+  <arg name="is_occluded_percentage"          default="0.6"/>
+
+  <group ns="core">
+    <!-- Push down all topics/nodelets into "camera" namespace -->
+    <group ns="$(arg camera)">
+      <!-- Compression options (important for bagging) -->
+      <rosparam param="depth/image_raw/compressed/format">png</rosparam>
+      <rosparam param="depth/image_raw/compressed/png_level">1</rosparam>
+
+      <!-- Start nodelet manager -->
+      <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" launch-prefix="nice -n -5">
+        <param name="num_worker_threads" value="$(arg num_worker_threads)"/>
+      </node>
+
+      <!-- Load driver -->
+      <include if="$(arg load_driver)"
+         file="$(find astra_launch)/launch/includes/device.launch.xml">
+        <arg name="manager"                         value="$(arg manager)" />
+        <arg name="device_id"                       value="$(arg device_id)" />
+        <arg name="rgb_frame_id"                    value="$(arg rgb_frame_id)" />
+        <arg name="depth_frame_id"                  value="$(arg depth_frame_id)" />
+        <arg name="rgb_camera_info_url"             value="$(arg rgb_camera_info_url)" />
+        <arg name="depth_camera_info_url"           value="$(arg depth_camera_info_url)" />
+        <arg name="rgb"                             value="$(arg rgb)" />
+        <arg name="ir"                              value="$(arg ir)" />
+        <arg name="depth"                           value="$(arg uncalibrated_depth)" />
+        <arg name="respawn"                         value="$(arg respawn)" />
+        <arg name="depth_registration"              value="$(arg depth_registration)" />
+        <arg name="color_depth_synchronization"     value="$(arg color_depth_synchronization)" />
+        <arg name="auto_exposure"                   value="$(arg auto_exposure)" />
+        <arg name="auto_white_balance"              value="$(arg auto_white_balance)" />
+      </include>
+
+      <node name="$(anon dynparam)" pkg="dynamic_reconfigure" type="dynparam" args="set_from_parameters driver">
+        <param name="depth_mode" type="int" value="8" />
+      </node>
+
+       <include file="$(find depth_calibration)/launch/depth_adjuster.launch.xml">
+        <arg name="manager"                         value="$(arg manager)" />
+        <arg name="input_depth_raw_topic"           value="$(arg uncalibrated_depth)/image_raw" />
+        <arg name="output_depth_raw_topic"          value="$(arg depth)/image_raw" />
+        <arg name="input_camera_info_topic"         value="$(arg uncalibrated_depth)/camera_info" />
+        <arg name="output_camera_info_relay_topic"  value="$(arg depth)/camera_info" />
+
+        <arg name="max_distance"                    value="3.5"/>
+        <arg name="unknown_depth_distance"          value="3.5"/>
+        <!-- if changing these, update our specifications document
+                 https://docs.google.com/document/d/1-S0LP2F2649jYrjduYYi2dRed8SlfBZdNJogwXcmuw4/edit
+        -->
+        <arg name="is_occluded_percentage"          value="$(arg is_occluded_percentage)"/>
+        <arg name="occluded_distance"               value="0.15"/>
+
+        <arg name="border_percentage_top"           value="0.02"/>
+        <arg name="border_percentage_bottom"        value="0.03"/>
+        <arg name="border_percentage_left"          value="0.04"/>
+        <arg name="border_percentage_right"         value="0.04"/>
+
+        <arg name="calibration_file_path"           value="camera_info/depth_calibration_$(arg camera).yaml"/>
+        <arg name="enable_adjust"                   value="true" />
+      </include>
+
+      <!-- Load standard constellation of processing nodelets -->
+      <include if="$(arg points_processing)" file="$(find rgbd_launch)/launch/includes/processing.launch.xml">
+        <arg name="manager"                         value="$(arg manager)" />
+        <arg name="rgb"                             value="$(arg rgb)" />
+        <arg name="ir"                              value="$(arg ir)" />
+        <arg name="depth"                           value="$(arg depth)" />
+        <arg name="respawn"                         value="$(arg respawn)" />
+        <arg name="rgb_processing"                  value="$(arg rgb_processing)" />
+        <arg name="debayer_processing"              value="$(arg debayer_processing)" />
+        <arg name="ir_processing"                   value="$(arg ir_processing)" />
+        <arg name="depth_processing"                value="$(arg depth_processing)" />
+        <arg name="depth_registered_processing"     value="$(arg depth_registered_processing)" />
+        <arg name="disparity_processing"            value="$(arg disparity_processing)" />
+        <arg name="disparity_registered_processing" value="$(arg disparity_registered_processing)" />
+        <arg name="hw_registered_processing"        value="$(arg hw_registered_processing)" />
+        <arg name="sw_registered_processing"        value="$(arg sw_registered_processing)" />
+      </include>
+
+      <include if="$(arg points_processing)" file="$(find downsampler)/launch/downsampler.launch.xml">
+        <arg name="name"                                default="downsampler"/>
+        <arg name="manager"                             default="$(arg manager)"/>
+        <arg name="input_cloud_topic"                   default="depth/points"/>
+        <arg name="downsampled_points_topic"            default="downsampled_obstacles"/>
+        <arg name="min_range"                           default="0.0"/>
+        <arg name="max_range"                           default="0.0"/>
+        <arg name="leaf_size"                           default="0.02"/>
+        <arg name="filter_radius"                       default="0.0"/>
+        <arg name="rate"                                default="20"/>
+        <arg name="cut_off_distance"                    default="1.2"/>
+        <arg name="sensor_frame"                        default="$(arg depth_frame_id)"/>
+      </include>
+
+      <include if="$(arg diagnostics)" file="$(find gopher_diagnostics)/launch/openni_diagnostics.launch.xml">
+        <arg name="name"                                default="$(arg camera)_diagnostics"/>
+        <arg name="manager"                             default="$(arg manager)"/>
+      </include>
+    </group> <!-- camera -->
+
+    <!-- Load reasonable defaults for the relative pose between cameras -->
+    <include if="$(arg publish_tf)"
+       file="$(find rgbd_launch)/launch/kinect_frames.launch">
+      <arg name="camera" value="$(arg camera)" />
+      <arg name="tf_prefix" value="$(arg tf_prefix)" />
+    </include>
+  </group>
+</launch>
