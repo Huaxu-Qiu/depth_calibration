@@ -14,7 +14,7 @@ find_package(catkin REQUIRED
 )
 
 find_package(Boost REQUIRED COMPONENTS thread filesystem)
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 2 REQUIRED)
 
 catkin_package(
   DEPENDS
