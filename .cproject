@@ -51,5 +51,4 @@
 			<resource resourceType="PROJECT" workspacePath="/depth_calibration"/>
 		</configuration>
 	</storageModule>
-	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

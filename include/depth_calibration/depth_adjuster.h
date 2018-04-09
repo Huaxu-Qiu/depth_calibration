@@ -21,14 +21,20 @@ public:
 
 protected:
   virtual void load_calibration(std::string file_path);
+  // _yujinEdit_
+  #if 1
   virtual void removeOutliers(cv::Mat& image);
+  #endif
   virtual void remove_borders(cv::Mat& image);
 
   ros::Subscriber sub_depth_raw_;
   ros::Publisher pub_calibrated_depth_raw_;
+  // _yujinEdit_
+  #if 1
   ros::Publisher pub_inlier_;
 
   double max_distance_;
+  #endif
   double unknown_depth_distance_;
   double is_occluded_percentage_;
   double occluded_distance_;
@@ -42,7 +48,10 @@ protected:
 
   ros::Subscriber sub_camera_info_;
   ros::Publisher pub_camera_info_relay_;
+  // _yujinEdit_
+  #if 1
   ros::Publisher invalid_ratio_pub_;
+  #endif
 };
 
 } //end namespace

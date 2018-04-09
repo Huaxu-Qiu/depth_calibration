@@ -1,7 +1,9 @@
 #include <time.h>
 #include <boost/thread/mutex.hpp>
+// _yujinEdit_
+#if 1
 #include <boost/filesystem.hpp>
-
+#endif
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -237,6 +239,9 @@ void save_multiplier(const std_msgs::EmptyConstPtr& empty)
 
   calibration_finished_ = true;
 
+#if 0 // _yujinEdit_
+  ROS_INFO_STREAM("Saving calibration to " << calibration_file_path_);
+#else
   boost::filesystem::path path(calibration_file_path_);
   boost::filesystem::path directory = path.parent_path();
 
@@ -254,6 +259,7 @@ void save_multiplier(const std_msgs::EmptyConstPtr& empty)
   }
 
   ROS_WARN_STREAM("Saving calibration to " << calibration_file_path_);
+#endif
   cv::FileStorage file_storage(calibration_file_path_, cv::FileStorage::WRITE);
 
   time_t rawtime;
@@ -264,7 +270,9 @@ void save_multiplier(const std_msgs::EmptyConstPtr& empty)
   file_storage.release();
 
   ROS_INFO("Saving finished.");
+#if 1 // _yujinEdit_
   ROS_INFO("All done, finished. Maybe check the result though..");
+#endif
 }
 
 int main(int argc, char** argv)

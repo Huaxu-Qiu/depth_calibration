@@ -22,9 +22,14 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr center_extraction(pcl::PCLPointCloud2Ptr clo
   pcl::PointXYZ max;
   pcl::getMinMax3D(*input_cloud, min, max);
 
+#if 0 // _yujinEdit_
+  double center_radius_x = (max.x - min.x) * 0.5 * 0.3; //30%
+  double center_radius_y = (max.y - min.y) * 0.5 * 0.3; //30%
+#else
   double used_plane_ratio = 0.8;
   double center_radius_x = (max.x - min.x) * 0.5 * used_plane_ratio;
   double center_radius_y = (max.y - min.y) * 0.5 * used_plane_ratio;
+#endif
 
   pcl::PassThrough<pcl::PointXYZ> pass;
   pass.setInputCloud(input_cloud);

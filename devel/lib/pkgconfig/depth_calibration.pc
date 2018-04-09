@@ -1,0 +1,8 @@
+prefix=/opt/groot/new_libs/depth_calibration/indigo/depth_calibration-indigo/devel
+
+Name: depth_calibration
+Description: Description of depth_calibration
+Version: 0.5.2
+Cflags: -I/opt/yujin/amd64/kinetic-devel/include -I/opt/yujin/amd64/kinetic-devel/include/opencv
+Libs: -L/opt/groot/new_libs/depth_calibration/indigo/depth_calibration-indigo/devel/lib /opt/yujin/amd64/kinetic-devel/lib/libopencv_calib3d.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_core.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_dnn.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_features2d.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_flann.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_highgui.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_imgcodecs.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_imgproc.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_ml.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_objdetect.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_photo.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_shape.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_stitching.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_superres.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_video.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_videoio.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_videostab.so.3.3.1 /opt/yujin/amd64/kinetic-devel/lib/libopencv_viz.so.3.3.1
+Requires: rospy roscpp std_msgs sensor_msgs pcl_ros pcl_conversions cv_bridge image_geometry

@@ -1,0 +1,1 @@
+/usr/bin/c++  -fPIC   -shared -Wl,-soname,libgtest.so -o libgtest.so CMakeFiles/gtest.dir/src/gtest-all.cc.o  -L/opt/groot/new_libs/depth_calibration/indigo/depth_calibration-indigo/gtest/src -lpthread -Wl,-rpath,/opt/groot/new_libs/depth_calibration/indigo/depth_calibration-indigo/gtest/src 

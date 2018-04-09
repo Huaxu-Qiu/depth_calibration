@@ -13,6 +13,9 @@ find_package(catkin REQUIRED
     nodelet
 )
 
+# _yujinEdit_
+# find_package(Boost REQUIRED COMPONENTS thread)
+# _yujinEdit_
 find_package(Boost REQUIRED COMPONENTS thread filesystem)
 find_package(OpenCV REQUIRED)
 
@@ -50,7 +53,11 @@ target_link_libraries(center_plane_extractor ${catkin_LIBRARIES})
 ##############################################################################
 # Installs
 ##############################################################################
-
+# _yujinEdit_
+#install(TARGETS ${PROJECT_NAME}
+#  DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#)
+# _yujinEdit_
 install(TARGETS ${PROJECT_NAME} 
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
   

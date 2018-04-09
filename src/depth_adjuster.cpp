@@ -1,27 +1,42 @@
 #include <depth_calibration/depth_adjuster.h>
-#include <opencv2/imgproc/imgproc.hpp>
 #include <pluginlib/class_list_macros.h>
+#if 1 // _yujinEdit_
+#include <opencv2/imgproc/imgproc.hpp>
 #include <deque>
 #include <std_msgs/Float64.h>
+#endif
+
 
 namespace depth_calibration
 {
 
+#if 1 // _yujinEdit_
 static double m_to_depth = 1000;
+#endif
 
 void DepthAdjuster::onInit()
 {
   ros::NodeHandle& nh = getNodeHandle();
 
+#if 0 // _yujinEdit_
+  sub_depth_raw_ = nh.subscribe<sensor_msgs::Image>("input_depth_raw", 1, &DepthAdjuster::apply_calibration_cb, this);
+#endif
   pub_calibrated_depth_raw_ = nh.advertise<sensor_msgs::Image>("output_depth_raw", 1);
+
+#if 1 // _yujinEdit_
   pub_inlier_ = nh.advertise<sensor_msgs::Image>("inlier", 1);
 
   pub_camera_info_relay_ = nh.advertise<sensor_msgs::CameraInfo>("output_camera_info_relay", 1);
+#endif
   sub_camera_info_ = nh.subscribe<sensor_msgs::CameraInfo>("input_camera_info", 1, &DepthAdjuster::relay_camera_info,
                                                            this);
+#if 0 // _yujinEdit_
+  pub_camera_info_relay_ = nh.advertise<sensor_msgs::CameraInfo>("output_camera_info_relay", 1);
+#endif
 
-  invalid_ratio_pub_ = nh.advertise<std_msgs::Float64>("invalid_ratio", 1);
-
+#if 1 // _yujinEdit_
+invalid_ratio_pub_ = nh.advertise<std_msgs::Float64>("invalid_ratio", 1);
+#endif
   ros::NodeHandle& private_nh = getPrivateNodeHandle();
   bool enable;
   private_nh.param("enable", enable, true);
@@ -34,18 +49,26 @@ void DepthAdjuster::onInit()
   else
     ROS_WARN("[Depth adjuster] Depth calibration disabled by launch file");
 
+#if 1 // _yujinEdit_
   private_nh.param("max_distance", max_distance_, 0.0);
   max_distance_ = max_distance_ * m_to_depth;
+#endif
 
   private_nh.param("unknown_depth_distance", unknown_depth_distance_, 0.0);
+#if 0 // _yujinEdit_
+  unknown_depth_distance_ = unknown_depth_distance_ * 1000; //convert to depth value, which are in mm
+#else
   unknown_depth_distance_ = unknown_depth_distance_ * m_to_depth;
+#endif
 
   private_nh.param("is_occluded_percentage", is_occluded_percentage_, 1.0);
 
+#if 1 // _yujinEdit_
   if(is_occluded_percentage_ <= 0.0)
   {
     ROS_WARN("[Depth adjuster] is_occluded_percentage is <= 0.0, occlusion detection is disabled");
   }
+#endif
 
   private_nh.param("occluded_distance", occluded_distance_, 0.0);
 
@@ -53,8 +76,9 @@ void DepthAdjuster::onInit()
   private_nh.param("border_percentage_bottom", border_percentage_bottom_, 0.0);
   private_nh.param("border_percentage_left", border_percentage_left_, 0.0);
   private_nh.param("border_percentage_right", border_percentage_right_, 0.0);
-
+#if 1 // _yujinEdit_
   sub_depth_raw_ = nh.subscribe<sensor_msgs::Image>("input_depth_raw", 1, &DepthAdjuster::apply_calibration_cb, this);
+#endif
 }
 
 void DepthAdjuster::load_calibration(std::string file_path)
@@ -78,16 +102,22 @@ void DepthAdjuster::load_calibration(std::string file_path)
 
 void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth_msg)
 {
-  if (!depth_multiplier_correction_.empty()
-      && (depth_msg->width != depth_multiplier_correction_.cols
-          || depth_msg->height != depth_multiplier_correction_.rows))
+  if (!depth_multiplier_correction_.empty() && (depth_msg->width != depth_multiplier_correction_.cols || depth_msg->height != depth_multiplier_correction_.rows))
   {
+  #if 0 // _yujinEdit_
+    ROS_ERROR_STREAM("[Depth adjuster] Calibration file has different resolution than camera depth image");
+    ROS_ERROR_STREAM(
+        "[Depth adjuster] Calibration multiplier: " << depth_multiplier_correction_.cols << "x" << depth_multiplier_correction_.rows << ", depth image: " << depth_msg->width << "x" << depth_msg->height);
+    ROS_WARN_STREAM("[Depth adjuster] Skipping depth calibration adjustments.");
+    depth_multiplier_correction_.release();
+  #else
     ROS_WARN_STREAM_THROTTLE(5.0, "[Depth adjuster] Calibration file has different resolution than camera depth image");
     ROS_WARN_STREAM_THROTTLE(5.0,
         "[Depth adjuster] Calibration multiplier: " << depth_multiplier_correction_.cols << "x" << depth_multiplier_correction_.rows << ", depth image: " << depth_msg->width << "x" << depth_msg->height);
     ROS_WARN_STREAM_THROTTLE(5.0, "[Depth adjuster] Skipping depth calibration adjustments (will try again, perhaps camera hasn't reconfigured yet).");
     pub_calibrated_depth_raw_.publish(depth_msg);
     return;
+  #endif
   }
 
   cv_bridge::CvImagePtr cv_depth_image;
@@ -102,6 +132,7 @@ void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth
   }
 
   cv::Mat depth_double = cv_depth_image->image.clone();
+  cv::Mat zero_addition = (depth_double == 0); //if true value is set to 255, so divide by 255 later
 
   depth_double.convertTo(depth_double, CV_64F);
   if (!depth_multiplier_correction_.empty())
@@ -109,28 +140,33 @@ void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth
     depth_double = (depth_double).mul(depth_multiplier_correction_);
   }
 
-//  removeOutliers(depth_double);
-
-  cv::Mat zero_addition = (depth_double == 0); //if true value is set to 255, so divide by 255 later
   int unknown_distances_count = cv::countNonZero(zero_addition);
 
+#if 1 // _yujinEdit_
   if(invalid_ratio_pub_.getNumSubscribers() > 0)
   {
     std_msgs::Float64 invalid_ratio_msg;
     invalid_ratio_msg.data = (double)unknown_distances_count / depth_double.total();
     invalid_ratio_pub_.publish(invalid_ratio_msg);
   }
+#endif
 
-  if (unknown_distances_count <= depth_double.total() * is_occluded_percentage_)
+  if(unknown_distances_count <= depth_double.total() * is_occluded_percentage_)
   {
     zero_addition.convertTo(zero_addition, CV_64F);
     depth_double += (zero_addition * unknown_depth_distance_ / 255.0);
   }
   else
   {
+  #if 0 // _yujinEdit_
+    ROS_WARN_THROTTLE(5.0, "3D sensors seems to be occluded");
+    zero_addition.convertTo(zero_addition, CV_64F);
+    depth_double += (zero_addition * occluded_distance_ * 1000 / 255.0);
+  #else
     ROS_INFO_THROTTLE(15.0, "[Depth adjuster] 3D sensors seems to be occluded");
     zero_addition.convertTo(zero_addition, CV_64F);
     depth_double += (zero_addition * occluded_distance_ * m_to_depth / 255.0);
+  #endif
   }
 
   if (border_percentage_top_ != 0.0 || border_percentage_bottom_ != 0.0 || border_percentage_left_ != 0.0
@@ -139,17 +175,20 @@ void DepthAdjuster::apply_calibration_cb(const sensor_msgs::ImageConstPtr& depth
     remove_borders(depth_double);
   }
 
+#if 1 // _yujinEdit_
   if (max_distance_ != 0.0)
   {
     depth_double.convertTo(depth_double, CV_32F); ///TODO change type?
     cv::threshold(depth_double, depth_double, max_distance_, 0.0, cv::THRESH_TRUNC);
   }
+#endif
+
 
   depth_double.convertTo(cv_depth_image->image, CV_16U);
-
   pub_calibrated_depth_raw_.publish(cv_depth_image->toImageMsg());
 }
 
+#if 1 // _yujinEdit_
 void DepthAdjuster::removeOutliers(cv::Mat& image)
 {
   ///TODO border treatment
@@ -283,9 +322,23 @@ void DepthAdjuster::removeOutliers(cv::Mat& image)
 //  inlier.convertTo(inlier, CV_64F);
 //  image = image.mul(inlier);
 }
+#endif
 
 void DepthAdjuster::remove_borders(cv::Mat& image)
 {
+#if 0 // _yujinEdit_
+  int border_height_top = image.cols * border_percentage_top_;
+  int border_height_bottom = image.cols * border_percentage_bottom_;
+  int border_width_left = image.rows * border_percentage_left_;
+  int border_width_right = image.rows * border_percentage_right_;
+  cv::Mat borders(image.size(), CV_64F, 1.0);
+
+  image(cv::Rect(0, 0, image.cols, border_height_top)).setTo(0); //top
+  image(cv::Rect(0, image.rows - border_height_bottom, image.cols, border_height_bottom)).setTo(0); //bottom
+
+  image(cv::Rect(0, 0, border_width_left, image.rows)).setTo(0); //left
+  image(cv::Rect(image.cols - border_width_right, 0, border_width_right, image.rows)).setTo(0); //right
+#else
   int border_height_top = image.rows * border_percentage_top_;
   int border_height_bottom = image.rows * border_percentage_bottom_;
   int border_width_left = image.cols * border_percentage_left_;
@@ -302,6 +355,7 @@ void DepthAdjuster::remove_borders(cv::Mat& image)
 
   image(cv::Rect(0, 0, border_width_left, image.rows)).setTo(0); //left
   image(cv::Rect(right_start, 0, border_width_right, image.rows)).setTo(0); //right
+#endif
 }
 
 void DepthAdjuster::relay_camera_info(const sensor_msgs::CameraInfoConstPtr& info_msg)
